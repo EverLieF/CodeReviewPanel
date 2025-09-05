@@ -1,5 +1,4 @@
-import { ChevronDown, ChevronRight, Download, Folder, FileText } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { ChevronDown, ChevronRight, Download, Folder, FileText, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProjectStore } from '../store/project-store';
 import { Project, FileNode } from '../lib/types';
@@ -14,15 +13,18 @@ function FileTreeNode({ node, depth = 0 }: { node: FileNode; depth?: number }) {
   return (
     <div>
       <div 
-        className="flex items-center text-muted-foreground text-xs font-mono py-0.5"
+        className="flex items-center text-muted-foreground text-sm py-1 pl-4"
         style={{ marginLeft }}
       >
         {node.type === 'folder' ? (
-          <Folder className="w-3 h-3 mr-2 text-blue-500" />
+          <Folder className="w-4 h-4 mr-2 text-blue-500" />
         ) : (
-          <FileText className="w-3 h-3 mr-2 text-green-500" />
+          <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
         )}
-        {node.name}
+        <span>{node.name}</span>
+        {node.type === 'file' && (
+          <span className="ml-auto text-xs text-muted-foreground">НЕТ КОММЕНТАРИЕВ</span>
+        )}
       </div>
       {node.children?.map((child, index) => (
         <FileTreeNode 
@@ -66,72 +68,49 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
+    <div className="border-b border-border py-4 hover:bg-accent/50 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <CheckCircle className="w-6 h-6 text-primary" />
           <div>
-            <h3 className="text-lg font-semibold text-card-foreground">
-              {project.name}
+            <h3 className="font-medium text-foreground">
+              {project.name} ({project.filesCount})
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {project.description}
-            </p>
           </div>
-          <span 
-            className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(project.status)}`}
-          >
-            {getStatusText(project.status)}
-          </span>
         </div>
         
-        <div className="flex items-center text-sm text-muted-foreground mb-4 space-x-4">
-          <span>
-            <FileText className="w-4 h-4 inline mr-1" />
-            {project.filesCount} файлов
-          </span>
-          <span>
-            {project.lastModified}
-          </span>
-        </div>
-        
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => toggleProjectExpansion(project.id)}
-            className="flex-1"
             data-testid={`expand-tree-${project.id}`}
+            className="text-muted-foreground hover:text-foreground"
           >
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4 mr-2" />
-            ) : (
-              <ChevronRight className="w-4 h-4 mr-2" />
-            )}
-            {isExpanded ? 'Скрыть дерево' : 'Дерево файлов'}
+            {isExpanded ? 'Скрыть папки' : 'Развернуть папки'}
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => downloadProject(project.id)}
             data-testid={`download-${project.id}`}
+            className="text-muted-foreground hover:text-foreground"
           >
             <Download className="w-4 h-4" />
           </Button>
         </div>
-        
-        {isExpanded && (
-          <div className="mt-4 p-3 bg-muted rounded-md">
-            <div className="space-y-1">
-              {project.fileTree.map((node, index) => (
-                <FileTreeNode 
-                  key={`${node.name}-${index}`} 
-                  node={node} 
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+      
+      {isExpanded && (
+        <div className="mt-4 ml-10 bg-accent/30 rounded-md p-2">
+          {project.fileTree.map((node, index) => (
+            <FileTreeNode 
+              key={`${node.name}-${index}`} 
+              node={node} 
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

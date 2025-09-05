@@ -70,61 +70,37 @@ export function CommentsPanel() {
           filteredComments.map((comment) => (
             <div 
               key={comment.id} 
-              className="bg-muted/30 border border-border rounded-lg p-4"
+              className="bg-muted rounded-lg p-4 space-y-3"
             >
-              <div className="flex items-start justify-between mb-2">
+              <div className="text-sm text-foreground mb-3">
+                {comment.text}
+              </div>
+              
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="text-sm font-medium">
+                  <Avatar className="w-6 h-6">
+                    <AvatarFallback className="text-xs font-medium bg-foreground text-background">
                       {comment.authorInitials}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <span className="font-medium text-card-foreground">
-                      {comment.author}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {comment.timestamp}
-                    </span>
-                  </div>
+                  <span className="text-sm font-medium text-foreground">
+                    {comment.author}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    • код-ревьюер
+                  </span>
                 </div>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(comment.status)}`}>
-                  {getStatusText(comment.status)}
-                </span>
-              </div>
-              
-              <div className="text-sm text-muted-foreground mb-2 flex items-center">
-                <MapPin className="w-3 h-3 mr-1" />
-                Строка {comment.line}
-              </div>
-              
-              <p className="text-sm text-card-foreground mb-3">
-                {comment.text}
-              </p>
-              
-              {comment.status !== 'resolved' && (
-                <div className="flex space-x-2">
+                
+                {comment.status === 'needs-fix' && (
                   <Button
-                    variant="ghost"
                     size="sm"
-                    onClick={() => resolveComment(comment.id)}
-                    className="text-xs"
-                    data-testid={`resolve-comment-${comment.id}`}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs px-3 py-1 h-auto"
+                    data-testid={`needs-fix-${comment.id}`}
                   >
-                    <Check className="w-3 h-3 mr-1" />
-                    Отметить решенным
+                    НАДО ИСПРАВИТЬ
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs"
-                    data-testid={`reply-comment-${comment.id}`}
-                  >
-                    <Reply className="w-3 h-3 mr-1" />
-                    Ответить
-                  </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))
         )}

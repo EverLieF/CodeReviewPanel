@@ -37,16 +37,11 @@ export default function ProjectPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Проекты</h2>
-          <p className="text-muted-foreground">
-            Управление проектами и их файловой структурой
-          </p>
-        </div>
+        <h2 className="text-2xl font-bold text-foreground">Проект студента</h2>
         <Button 
           onClick={() => setShowUploadModal(true)}
           data-testid="upload-project-btn"
-          className="font-medium"
+          className="font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           <Plus className="w-4 h-4 mr-2" />
           Загрузить репозиторий
@@ -63,7 +58,7 @@ export default function ProjectPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-card border border-border rounded-lg divide-y divide-border">
           {projects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
