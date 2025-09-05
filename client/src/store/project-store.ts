@@ -20,6 +20,7 @@ interface ProjectStore {
   downloadProject: (projectId: string) => void;
   exportTimelineCSV: () => void;
   setLoading: (loading: boolean) => void;
+  addProject: (project: Project) => void;
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -120,5 +121,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   setLoading: (loading: boolean) => {
     set({ isLoading: loading });
+  },
+
+  addProject: (project: Project) => {
+    const { projects } = get();
+    const newProjects = [project, ...projects];
+    set({ projects: newProjects });
   }
 }));

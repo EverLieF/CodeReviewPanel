@@ -1,9 +1,14 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { ProjectCard } from '../components/project-card';
+import { UploadProjectModal } from '../components/upload-project-modal';
 import { useProjectStore } from '../store/project-store';
+import { useState } from 'react';
 
 export default function ProjectPage() {
   const { projects, isLoading } = useProjectStore();
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   if (isLoading) {
     return (
@@ -31,11 +36,21 @@ export default function ProjectPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Проекты</h2>
-        <p className="text-muted-foreground">
-          Управление проектами и их файловой структурой
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Проекты</h2>
+          <p className="text-muted-foreground">
+            Управление проектами и их файловой структурой
+          </p>
+        </div>
+        <Button 
+          onClick={() => setShowUploadModal(true)}
+          data-testid="upload-project-btn"
+          className="font-medium"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Загрузить репозиторий
+        </Button>
       </div>
       
       {projects.length === 0 ? (
@@ -54,6 +69,11 @@ export default function ProjectPage() {
           ))}
         </div>
       )}
+
+      <UploadProjectModal 
+        open={showUploadModal} 
+        onClose={() => setShowUploadModal(false)} 
+      />
     </div>
   );
 }
