@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, X, Folder, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useProjectStore } from '../store/project-store';
+import { uploadProject } from '../lib/api';
 import { FileNode } from '../lib/types';
 
 interface UploadProjectModalProps {
@@ -20,7 +20,6 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
-  const { addProject } = useProjectStore();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -94,25 +93,24 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
     }
 
     setIsUploading(true);
-
+    
     try {
-      const fileTree = buildFileTree(uploadedFiles);
+      // Создаем FormData для загрузки файлов
+      const formData = new FormData();
+      formData.append('name', projectName);
+      formData.append('description', projectDescription || 'Загруженный репозиторий');
       
-      const newProject = {
-        id: Date.now().toString(),
-        name: projectName,
-        description: projectDescription || 'Загруженный репозиторий',
-        status: 'ready' as const,
-        filesCount: uploadedFiles.length,
-        lastModified: 'только что',
-        fileTree
-      };
+      // Добавляем все файлы
+      uploadedFiles.forEach(file => {
+        formData.append('files', file);
+      });
 
-      addProject(newProject);
-
+      // Используем новую API-функцию для загрузки
+      await uploadProject(formData);
+      
       toast({
-        title: 'Успешно!',
-        description: 'Репозиторий успешно загружен',
+        title: 'Успех',
+        description: 'Проект успешно загружен',
       });
 
       // Reset form
@@ -123,7 +121,7 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
     } catch (error) {
       toast({
         title: 'Ошибка',
-        description: 'Не удалось загрузить репозиторий',
+        description: 'Не удалось загрузить проект',
         variant: 'destructive',
       });
     } finally {

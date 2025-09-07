@@ -1,0 +1,745 @@
+<html lang="ru" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель ревью проектов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                },
+                fontFamily: {
+                    sans: ["Inter", "system-ui", "sans-serif"],
+                    mono: ["JetBrains Mono", "Monaco", "Consolas", "monospace"],
+                }
+            },
+        }
+    };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --radius: 0.5rem;
+            
+            /* Light theme */
+            --background: hsl(0 0% 100%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(221.2 83.2% 53.3%);
+            --primary-foreground: hsl(210 40% 98%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(222.2 84% 4.9%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(210 40% 96%);
+            --accent-foreground: hsl(222.2 84% 4.9%);
+            --destructive: hsl(0 84.2% 60.2%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(221.2 83.2% 53.3%);
+        }
+        
+        .dark {
+            --background: hsl(222.2 84% 4.9%);
+            --foreground: hsl(210 40% 98%);
+            --card: hsl(222.2 84% 4.9%);
+            --card-foreground: hsl(210 40% 98%);
+            --popover: hsl(222.2 84% 4.9%);
+            --popover-foreground: hsl(210 40% 98%);
+            --primary: hsl(217.2 91.2% 59.8%);
+            --primary-foreground: hsl(222.2 84% 4.9%);
+            --secondary: hsl(217.2 32.6% 17.5%);
+            --secondary-foreground: hsl(210 40% 98%);
+            --muted: hsl(217.2 32.6% 17.5%);
+            --muted-foreground: hsl(215 20.2% 65.1%);
+            --accent: hsl(217.2 32.6% 17.5%);
+            --accent-foreground: hsl(210 40% 98%);
+            --destructive: hsl(0 62.8% 30.6%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(217.2 32.6% 17.5%);
+            --input: hsl(217.2 32.6% 17.5%);
+            --ring: hsl(224.3 76.3% 94.1%);
+        }
+        
+        .syntax-highlight .keyword { color: #d73a49; }
+        .syntax-highlight .string { color: #032f62; }
+        .syntax-highlight .comment { color: #6a737d; font-style: italic; }
+        .syntax-highlight .function { color: #6f42c1; }
+        .syntax-highlight .number { color: #005cc5; }
+        
+        .dark .syntax-highlight .keyword { color: #f97583; }
+        .dark .syntax-highlight .string { color: #79b8ff; }
+        .dark .syntax-highlight .comment { color: #8b949e; }
+        .dark .syntax-highlight .function { color: #b392f0; }
+        .dark .syntax-highlight .number { color: #79b8ff; }
+        
+        .animate-pulse-skeleton {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground min-h-screen font-sans">
+    <!-- @COMPONENT: App [main application container] -->
+    <div id="app" class="min-h-screen">
+        <!-- @COMPONENT: Header [top navigation and theme toggle] -->
+        <header class="border-b border-border bg-card">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center space-x-8">
+                        <h1 class="text-xl font-semibold text-foreground">Панель ревью проектов</h1>
+                        
+                        <!-- @COMPONENT: TabNavigation [main navigation tabs] -->
+                        <nav class="flex space-x-1" data-implementation="React Router navigation">
+                            <button data-tab="project" class="tab-button active px-3 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground">
+                                <i class="fas fa-folder mr-2"></i>Проект
+                            </button>
+                            <button data-tab="review" class="tab-button px-3 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                                <i class="fas fa-code-branch mr-2"></i>Ревью
+                            </button>
+                            <button data-tab="history" class="tab-button px-3 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                                <i class="fas fa-history mr-2"></i>История
+                            </button>
+                        </nav>
+                        <!-- @END_COMPONENT: TabNavigation -->
+                    </div>
+                    
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-md hover:bg-accent transition-colors" data-implementation="Toggle between light and dark themes">
+                        <i class="fas fa-moon text-muted-foreground"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        <!-- @END_COMPONENT: Header -->
+        
+        <!-- @COMPONENT: MainContent [page content container] -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- @COMPONENT: ProjectPage [project cards and file trees] -->
+            <!-- @STATE: currentPage:string = "project" -->
+            <div id="project-page" class="page-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-foreground mb-2">Проекты</h2>
+                    <p class="text-muted-foreground">Управление проектами и их файловой структурой</p>
+                </div>
+                
+                <!-- Project Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- @MAP: projects.map(project => ( -->
+                    
+                    <!-- Project Card 1 -->
+                    <div class="bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow" data-mock="true">
+                        <div class="p-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-card-foreground" data-bind="project.name">E-commerce Dashboard</h3>
+                                    <p class="text-sm text-muted-foreground mt-1" data-bind="project.description">React + TypeScript веб-приложение</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full" data-bind="project.status">
+                                    Готов
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center text-sm text-muted-foreground mb-4 space-x-4">
+                                <span><i class="fas fa-file-code mr-1"></i><span data-bind="project.filesCount">47</span> файлов</span>
+                                <span><i class="fas fa-clock mr-1"></i><span data-bind="project.lastModified">2 часа назад</span></span>
+                            </div>
+                            
+                            <div class="flex space-x-2">
+                                <button class="flex-1 px-3 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors" data-event="click:expandFileTree" data-implementation="Toggle file tree visibility">
+                                    <i class="fas fa-sitemap mr-2"></i>Дерево файлов
+                                </button>
+                                <button class="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors" data-event="click:downloadProject" data-implementation="Download project files">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- File Tree (Hidden by default) -->
+                            <div class="file-tree mt-4 p-3 bg-muted rounded-md hidden" data-implementation="Toggle visibility with expand button">
+                                <div class="text-xs font-mono space-y-1">
+                                    <div class="flex items-center text-muted-foreground">
+                                        <i class="fas fa-folder mr-2 text-blue-500"></i>src/
+                                    </div>
+                                    <div class="flex items-center ml-4 text-muted-foreground">
+                                        <i class="fas fa-folder mr-2 text-blue-500"></i>components/
+                                    </div>
+                                    <div class="flex items-center ml-8 text-muted-foreground">
+                                        <i class="fas fa-file-code mr-2 text-green-500"></i>Dashboard.tsx
+                                    </div>
+                                    <div class="flex items-center ml-8 text-muted-foreground">
+                                        <i class="fas fa-file-code mr-2 text-green-500"></i>Sidebar.tsx
+                                    </div>
+                                    <div class="flex items-center ml-4 text-muted-foreground">
+                                        <i class="fas fa-folder mr-2 text-blue-500"></i>pages/
+                                    </div>
+                                    <div class="flex items-center ml-8 text-muted-foreground">
+                                        <i class="fas fa-file-code mr-2 text-green-500"></i>Home.tsx
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Project Card 2 -->
+                    <div class="bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow" data-mock="true">
+                        <div class="p-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-card-foreground" data-bind="project.name">Mobile Banking App</h3>
+                                    <p class="text-sm text-muted-foreground mt-1" data-bind="project.description">React Native приложение</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full" data-bind="project.status">
+                                    В работе
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center text-sm text-muted-foreground mb-4 space-x-4">
+                                <span><i class="fas fa-file-code mr-1"></i><span data-bind="project.filesCount">23</span> файлов</span>
+                                <span><i class="fas fa-clock mr-1"></i><span data-bind="project.lastModified">1 день назад</span></span>
+                            </div>
+                            
+                            <div class="flex space-x-2">
+                                <button class="flex-1 px-3 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors" data-event="click:expandFileTree">
+                                    <i class="fas fa-sitemap mr-2"></i>Дерево файлов
+                                </button>
+                                <button class="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors" data-event="click:downloadProject">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Project Card 3 -->
+                    <div class="bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow" data-mock="true">
+                        <div class="p-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-card-foreground" data-bind="project.name">Data Analytics Tool</h3>
+                                    <p class="text-sm text-muted-foreground mt-1" data-bind="project.description">Python + FastAPI сервис</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full" data-bind="project.status">
+                                    Ошибки
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center text-sm text-muted-foreground mb-4 space-x-4">
+                                <span><i class="fas fa-file-code mr-1"></i><span data-bind="project.filesCount">15</span> файлов</span>
+                                <span><i class="fas fa-clock mr-1"></i><span data-bind="project.lastModified">3 дня назад</span></span>
+                            </div>
+                            
+                            <div class="flex space-x-2">
+                                <button class="flex-1 px-3 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors" data-event="click:expandFileTree">
+                                    <i class="fas fa-sitemap mr-2"></i>Дерево файлов
+                                </button>
+                                <button class="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors" data-event="click:downloadProject">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- @END_MAP )) -->
+                </div>
+                
+                <!-- Loading Skeletons -->
+                <div class="skeleton-container hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="bg-card border border-border rounded-lg p-6 animate-pulse-skeleton">
+                            <div class="h-4 bg-muted rounded mb-2"></div>
+                            <div class="h-3 bg-muted rounded w-3/4 mb-4"></div>
+                            <div class="h-3 bg-muted rounded w-1/2 mb-4"></div>
+                            <div class="flex space-x-2">
+                                <div class="h-8 bg-muted rounded flex-1"></div>
+                                <div class="h-8 w-8 bg-muted rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: ProjectPage -->
+            
+            <!-- @COMPONENT: ReviewPage [two-column code review layout] -->
+            <div id="review-page" class="page-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-foreground mb-2">Ревью кода</h2>
+                    <p class="text-muted-foreground">Просмотр и комментирование изменений в коде</p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+                    <!-- @COMPONENT: CodeViewer [syntax highlighted code display] -->
+                    <div class="bg-card border border-border rounded-lg overflow-hidden">
+                        <div class="border-b border-border p-4 bg-muted/30">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-medium text-card-foreground">src/components/Dashboard.tsx</h3>
+                                <div class="flex items-center space-x-2 text-sm text-muted-foreground">
+                                    <span class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded text-xs">+15</span>
+                                    <span class="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 px-2 py-1 rounded text-xs">-3</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 overflow-auto h-full font-mono text-sm syntax-highlight" data-implementation="Use syntax highlighting library like Prism.js or highlight.js">
+                            <div class="space-y-1" data-mock="true">
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">1</span>
+                                    <span><span class="keyword">import</span> <span class="string">React</span> <span class="keyword">from</span> <span class="string">'react'</span>;</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">2</span>
+                                    <span><span class="keyword">import</span> { <span class="function">useState</span>, <span class="function">useEffect</span> } <span class="keyword">from</span> <span class="string">'react'</span>;</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">3</span>
+                                    <span></span>
+                                </div>
+                                <div class="flex bg-green-50 dark:bg-green-900/20">
+                                    <span class="w-8 text-muted-foreground text-right mr-4 bg-green-100 dark:bg-green-900/40">4</span>
+                                    <span><span class="keyword">interface</span> <span class="function">DashboardProps</span> {</span>
+                                </div>
+                                <div class="flex bg-green-50 dark:bg-green-900/20">
+                                    <span class="w-8 text-muted-foreground text-right mr-4 bg-green-100 dark:bg-green-900/40">5</span>
+                                    <span>  title: <span class="keyword">string</span>;</span>
+                                </div>
+                                <div class="flex bg-green-50 dark:bg-green-900/20">
+                                    <span class="w-8 text-muted-foreground text-right mr-4 bg-green-100 dark:bg-green-900/40">6</span>
+                                    <span>  data: <span class="keyword">any</span>[];</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">7</span>
+                                    <span>}</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">8</span>
+                                    <span></span>
+                                </div>
+                                <div class="flex bg-red-50 dark:bg-red-900/20">
+                                    <span class="w-8 text-muted-foreground text-right mr-4 bg-red-100 dark:bg-red-900/40">9</span>
+                                    <span><span class="keyword">const</span> <span class="function">Dashboard</span> = () => {</span>
+                                </div>
+                                <div class="flex bg-green-50 dark:bg-green-900/20">
+                                    <span class="w-8 text-muted-foreground text-right mr-4 bg-green-100 dark:bg-green-900/40">10</span>
+                                    <span><span class="keyword">const</span> <span class="function">Dashboard</span>: <span class="function">React.FC</span>&lt;<span class="function">DashboardProps</span>&gt; = ({ title, data }) => {</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">11</span>
+                                    <span>  <span class="keyword">const</span> [loading, setLoading] = <span class="function">useState</span>(<span class="keyword">true</span>);</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">12</span>
+                                    <span></span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">13</span>
+                                    <span>  <span class="keyword">return</span> (</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">14</span>
+                                    <span>    &lt;<span class="keyword">div</span> <span class="string">className</span>=<span class="string">"dashboard"</span>&gt;</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">15</span>
+                                    <span>      &lt;<span class="keyword">h1</span>&gt;{title}&lt;/<span class="keyword">h1</span>&gt;</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">16</span>
+                                    <span>    &lt;/<span class="keyword">div</span>&gt;</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">17</span>
+                                    <span>  );</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-8 text-muted-foreground text-right mr-4">18</span>
+                                    <span>};</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: CodeViewer -->
+                    
+                    <!-- @COMPONENT: CommentsPanel [review comments with filtering] -->
+                    <div class="bg-card border border-border rounded-lg overflow-hidden">
+                        <div class="border-b border-border p-4 bg-muted/30">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-medium text-card-foreground">Комментарии ревью</h3>
+                                <select class="px-3 py-1 text-sm border border-border rounded-md bg-background text-foreground" data-implementation="Filter comments by status">
+                                    <option value="all">Все комментарии</option>
+                                    <option value="needs-fix">Надо исправить</option>
+                                    <option value="suggestion">Предложения</option>
+                                    <option value="resolved">Решено</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 space-y-4 overflow-auto h-full">
+                            <!-- @MAP: comments.map(comment => ( -->
+                            
+                            <!-- Comment 1 -->
+                            <div class="bg-muted/30 border border-border rounded-lg p-4" data-mock="true">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium">АП</div>
+                                        <div>
+                                            <span class="font-medium text-card-foreground" data-bind="comment.author">Алексей Петров</span>
+                                            <span class="text-xs text-muted-foreground ml-2" data-bind="comment.timestamp">2 часа назад</span>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
+                                        Надо исправить
+                                    </span>
+                                </div>
+                                <div class="text-sm text-muted-foreground mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>Строка 10
+                                </div>
+                                <p class="text-sm text-card-foreground" data-bind="comment.text">
+                                    Следует добавить типизацию для props. Использование <code class="bg-muted px-1 rounded text-xs font-mono">any[]</code> не рекомендуется.
+                                </p>
+                                <div class="mt-3 flex space-x-2">
+                                    <button class="text-xs text-primary hover:text-primary/80 font-medium" data-event="click:resolveComment">
+                                        <i class="fas fa-check mr-1"></i>Отметить решенным
+                                    </button>
+                                    <button class="text-xs text-muted-foreground hover:text-foreground" data-event="click:replyComment">
+                                        <i class="fas fa-reply mr-1"></i>Ответить
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Comment 2 -->
+                            <div class="bg-muted/30 border border-border rounded-lg p-4" data-mock="true">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 h-8 bg-secondary rounded-full flex items-center justify-center text-secondary-foreground text-sm font-medium">МС</div>
+                                        <div>
+                                            <span class="font-medium text-card-foreground" data-bind="comment.author">Мария Сидорова</span>
+                                            <span class="text-xs text-muted-foreground ml-2" data-bind="comment.timestamp">4 часа назад</span>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                                        Предложение
+                                    </span>
+                                </div>
+                                <div class="text-sm text-muted-foreground mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>Строка 15
+                                </div>
+                                <p class="text-sm text-card-foreground" data-bind="comment.text">
+                                    Рекомендую добавить обработку состояния загрузки для лучшего UX.
+                                </p>
+                                <div class="mt-3 flex space-x-2">
+                                    <button class="text-xs text-primary hover:text-primary/80 font-medium" data-event="click:resolveComment">
+                                        <i class="fas fa-check mr-1"></i>Отметить решенным
+                                    </button>
+                                    <button class="text-xs text-muted-foreground hover:text-foreground" data-event="click:replyComment">
+                                        <i class="fas fa-reply mr-1"></i>Ответить
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Comment 3 -->
+                            <div class="bg-muted/30 border border-border rounded-lg p-4" data-mock="true">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 h-8 bg-accent rounded-full flex items-center justify-center text-accent-foreground text-sm font-medium">ИК</div>
+                                        <div>
+                                            <span class="font-medium text-card-foreground" data-bind="comment.author">Иван Козлов</span>
+                                            <span class="text-xs text-muted-foreground ml-2" data-bind="comment.timestamp">1 день назад</span>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                                        Решено
+                                    </span>
+                                </div>
+                                <div class="text-sm text-muted-foreground mb-2">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>Строка 6
+                                </div>
+                                <p class="text-sm text-card-foreground opacity-75" data-bind="comment.text">
+                                    Добавить валидацию входных данных.
+                                </p>
+                            </div>
+                            
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: CommentsPanel -->
+                </div>
+            </div>
+            <!-- @END_COMPONENT: ReviewPage -->
+            
+            <!-- @COMPONENT: HistoryPage [timeline and export functionality] -->
+            <div id="history-page" class="page-content hidden">
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-foreground mb-2">История изменений</h2>
+                        <p class="text-muted-foreground">Хронология событий и изменений в проекте</p>
+                    </div>
+                    <button class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium" data-event="click:exportCSV" data-implementation="Export timeline data to CSV">
+                        <i class="fas fa-download mr-2"></i>Экспорт CSV
+                    </button>
+                </div>
+                
+                <!-- Timeline -->
+                <div class="space-y-6" data-mock="true">
+                    <!-- @MAP: timelineEvents.map(event => ( -->
+                    
+                    <!-- Timeline Event 1 -->
+                    <div class="flex space-x-4">
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                                <i class="fas fa-code-branch text-primary-foreground text-sm"></i>
+                            </div>
+                            <div class="w-0.5 h-16 bg-border mt-2"></div>
+                        </div>
+                        <div class="flex-1 pb-8">
+                            <div class="bg-card border border-border rounded-lg p-4">
+                                <div class="flex items-start justify-between mb-2">
+                                    <h3 class="font-medium text-card-foreground" data-bind="event.title">Создан новый ревью</h3>
+                                    <span class="text-sm text-muted-foreground" data-bind="event.timestamp">2 часа назад</span>
+                                </div>
+                                <p class="text-sm text-muted-foreground mb-3" data-bind="event.description">
+                                    Алексей Петров создал ревью для изменений в Dashboard.tsx
+                                </p>
+                                <div class="flex items-center space-x-4 text-xs text-muted-foreground">
+                                    <span><i class="fas fa-user mr-1"></i><span data-bind="event.author">Алексей Петров</span></span>
+                                    <span><i class="fas fa-file-code mr-1"></i><span data-bind="event.filesChanged">3</span> файла изменено</span>
+                                    <span><i class="fas fa-comments mr-1"></i><span data-bind="event.commentsCount">5</span> комментариев</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline Event 2 -->
+                    <div class="flex space-x-4">
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-check text-white text-sm"></i>
+                            </div>
+                            <div class="w-0.5 h-16 bg-border mt-2"></div>
+                        </div>
+                        <div class="flex-1 pb-8">
+                            <div class="bg-card border border-border rounded-lg p-4">
+                                <div class="flex items-start justify-between mb-2">
+                                    <h3 class="font-medium text-card-foreground" data-bind="event.title">Ревью одобрено</h3>
+                                    <span class="text-sm text-muted-foreground" data-bind="event.timestamp">4 часа назад</span>
+                                </div>
+                                <p class="text-sm text-muted-foreground mb-3" data-bind="event.description">
+                                    Мария Сидорова одобрила изменения в Mobile Banking App
+                                </p>
+                                <div class="flex items-center space-x-4 text-xs text-muted-foreground">
+                                    <span><i class="fas fa-user mr-1"></i><span data-bind="event.author">Мария Сидорова</span></span>
+                                    <span><i class="fas fa-file-code mr-1"></i><span data-bind="event.filesChanged">1</span> файл изменен</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline Event 3 -->
+                    <div class="flex space-x-4">
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-white text-sm"></i>
+                            </div>
+                            <div class="w-0.5 h-16 bg-border mt-2"></div>
+                        </div>
+                        <div class="flex-1 pb-8">
+                            <div class="bg-card border border-border rounded-lg p-4">
+                                <div class="flex items-start justify-between mb-2">
+                                    <h3 class="font-medium text-card-foreground" data-bind="event.title">Найдены ошибки</h3>
+                                    <span class="text-sm text-muted-foreground" data-bind="event.timestamp">1 день назад</span>
+                                </div>
+                                <p class="text-sm text-muted-foreground mb-3" data-bind="event.description">
+                                    Автоматическое тестирование выявило 3 критические ошибки в Data Analytics Tool
+                                </p>
+                                <div class="flex items-center space-x-4 text-xs text-muted-foreground">
+                                    <span><i class="fas fa-robot mr-1"></i>Система тестирования</span>
+                                    <span><i class="fas fa-bug mr-1"></i><span data-bind="event.errorsCount">3</span> ошибки</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline Event 4 -->
+                    <div class="flex space-x-4">
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                <i class="fas fa-plus text-white text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="bg-card border border-border rounded-lg p-4">
+                                <div class="flex items-start justify-between mb-2">
+                                    <h3 class="font-medium text-card-foreground" data-bind="event.title">Создан новый проект</h3>
+                                    <span class="text-sm text-muted-foreground" data-bind="event.timestamp">3 дня назад</span>
+                                </div>
+                                <p class="text-sm text-muted-foreground mb-3" data-bind="event.description">
+                                    Иван Козлов создал проект "E-commerce Dashboard"
+                                </p>
+                                <div class="flex items-center space-x-4 text-xs text-muted-foreground">
+                                    <span><i class="fas fa-user mr-1"></i><span data-bind="event.author">Иван Козлов</span></span>
+                                    <span><i class="fas fa-folder mr-1"></i>Новый проект</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- @END_MAP )) -->
+                </div>
+                
+                <!-- Empty State -->
+                <div class="empty-state text-center py-12 hidden" data-implementation="Show when no history events">
+                    <i class="fas fa-history text-4xl text-muted-foreground mb-4"></i>
+                    <h3 class="text-lg font-medium text-card-foreground mb-2">История пуста</h3>
+                    <p class="text-muted-foreground">События будут отображаться здесь по мере их возникновения</p>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: HistoryPage -->
+            
+        </main>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+    <!-- @END_COMPONENT: App -->
+    
+    <script>
+        // TODO: Implement React Router for navigation, Zustand for state management, and component logic
+        
+        (function() {
+            // Theme toggle functionality
+            const themeToggle = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            
+            // Initialize theme
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            html.className = currentTheme;
+            updateThemeIcon(currentTheme);
+            
+            themeToggle.addEventListener('click', function() {
+                const newTheme = html.className === 'light' ? 'dark' : 'light';
+                html.className = newTheme;
+                localStorage.setItem('theme', newTheme);
+                updateThemeIcon(newTheme);
+            });
+            
+            function updateThemeIcon(theme) {
+                const icon = themeToggle.querySelector('i');
+                icon.className = theme === 'light' ? 'fas fa-moon text-muted-foreground' : 'fas fa-sun text-muted-foreground';
+            }
+            
+            // Tab navigation functionality
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const pages = document.querySelectorAll('.page-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetTab = this.getAttribute('data-tab');
+                    
+                    // Update active tab
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active', 'bg-primary', 'text-primary-foreground');
+                        btn.classList.add('text-muted-foreground', 'hover:text-foreground', 'hover:bg-accent');
+                    });
+                    
+                    this.classList.remove('text-muted-foreground', 'hover:text-foreground', 'hover:bg-accent');
+                    this.classList.add('active', 'bg-primary', 'text-primary-foreground');
+                    
+                    // Show target page
+                    pages.forEach(page => page.classList.add('hidden'));
+                    document.getElementById(targetTab + '-page').classList.remove('hidden');
+                });
+            });
+            
+            // File tree toggle functionality
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('button')?.textContent.includes('Дерево файлов')) {
+                    const card = e.target.closest('.bg-card');
+                    const fileTree = card.querySelector('.file-tree');
+                    const button = e.target.closest('button');
+                    
+                    if (fileTree.classList.contains('hidden')) {
+                        fileTree.classList.remove('hidden');
+                        button.innerHTML = '<i class="fas fa-sitemap mr-2"></i>Скрыть дерево';
+                    } else {
+                        fileTree.classList.add('hidden');
+                        button.innerHTML = '<i class="fas fa-sitemap mr-2"></i>Дерево файлов';
+                    }
+                }
+            });
+            
+            // Mock loading state
+            function showLoadingState() {
+                document.querySelectorAll('.page-content').forEach(page => {
+                    const skeleton = page.querySelector('.skeleton-container');
+                    if (skeleton) {
+                        skeleton.classList.remove('hidden');
+                        setTimeout(() => {
+                            skeleton.classList.add('hidden');
+                        }, 2000);
+                    }
+                });
+            }
+            
+            // Initialize with some mock interactions
+            console.log('Project Review Panel initialized');
+            console.log('TODO: Implement full React architecture with:');
+            console.log('- React Router for navigation');
+            console.log('- Zustand for state management');
+            console.log('- TypeScript interfaces for data types');
+            console.log('- Mock data fixtures');
+            console.log('- Syntax highlighting library');
+            console.log('- CSV export functionality');
+            
+        })();
+    </script>
+</body>
+</html>

@@ -91,5 +91,10 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [
+    // @ts-ignore - плагины Tailwind не имеют типов
+    require("tailwindcss-animate"), 
+    // @ts-ignore - плагины Tailwind не имеют типов
+    require("@tailwindcss/typography")
+  ],
 } satisfies Config;

@@ -1,14 +1,68 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { ProjectCard } from '../components/project-card';
 import { UploadProjectModal } from '../components/upload-project-modal';
 import { useProjectStore } from '../store/project-store';
+import { useQuery } from '@tanstack/react-query';
+import { getProjects } from '../lib/api';
+import { useToast } from '../hooks/use-toast';
 import { useState } from 'react';
 
 export default function ProjectPage() {
-  const { projects, isLoading } = useProjectStore();
+  const { toast } = useToast();
   const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  const { 
+    data: projects = [], 
+    isLoading, 
+    isError, 
+    refetch 
+  } = useQuery({
+    queryKey: ['projects'],
+    queryFn: getProjects,
+  });
+
+  if (isError) {
+    return (
+      <div>
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-foreground">Проект студента</h2>
+          <Button 
+            onClick={() => setShowUploadModal(true)}
+            data-testid="upload-project-btn"
+            className="font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Загрузить репозиторий
+          </Button>
+        </div>
+        
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-card-foreground mb-2">
+            Ошибка загрузки проектов
+          </h3>
+          <p className="text-muted-foreground mb-4">
+            Не удалось загрузить список проектов
+          </p>
+          <Button 
+            onClick={() => {
+              refetch();
+              toast({
+                title: "Повторная попытка",
+                description: "Пытаемся загрузить проекты снова...",
+              });
+            }}
+            variant="outline"
+            className="font-medium"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Повторить
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
