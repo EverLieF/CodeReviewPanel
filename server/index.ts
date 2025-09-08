@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { config } from "./config";
 import { setupVite, serveStatic, log } from "./vite";
+import { errorHandler } from "./services/error-handler";
 
 const app = express();
 app.use(express.json());
@@ -39,12 +41,34 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  app.use(async (err: any, req: Request, res: Response, _next: NextFunction) => {
+    try {
+      const errorResponse = await errorHandler.handleApiError(err, {
+        operation: `${req.method} ${req.path}`,
+        projectId: req.params?.id,
+        submissionId: req.params?.submissionId,
+        runId: req.params?.runId
+      });
 
-    res.status(status).json({ message });
-    throw err;
+      res.status(errorResponse.status).json({
+        message: errorResponse.message,
+        userMessage: errorResponse.userMessage,
+        suggestion: errorResponse.suggestion
+      });
+    } catch (handlerError) {
+      // Fallback если сам обработчик ошибок упал
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      
+      res.status(status).json({ 
+        message,
+        userMessage: "Произошла неожиданная ошибка",
+        suggestion: "Попробуйте повторить операцию позже"
+      });
+    }
+    
+    // Логируем ошибку для отладки
+    console.error("API Error:", err);
   });
 
   // importantly only setup vite in development and after
@@ -63,5 +87,12 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || '3000', 10);
   server.listen(port, "127.0.0.1", () => {
     log(`serving on port ${port}`);
+    // Log important config values to ensure env loaded (without secrets)
+    log(`apiBaseUrl=${config.apiBaseUrl}`);
+    log(`uploadDir=${config.uploadDir}`);
+    log(`workDir=${config.workDir}`);
+    log(`artifactsDir=${config.artifactsDir}`);
+    log(`maxUploadMb=${config.maxUploadMb}`);
+    log(`enablePytest=${String(config.enablePytest)}`);
   });
 })();

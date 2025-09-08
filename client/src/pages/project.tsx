@@ -1,8 +1,11 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, RefreshCw, FileText, BarChart3, UserCheck } from 'lucide-react';
 import { ProjectCard } from '../components/project-card';
 import { UploadProjectModal } from '../components/upload-project-modal';
+import { ReportTab } from '../components/report-tab';
+import { ReviewerTab } from '../components/reviewer-tab';
 import { useProjectStore } from '../store/project-store';
 import { useQuery } from '@tanstack/react-query';
 import { getProjects } from '../lib/api';
@@ -12,6 +15,8 @@ import { useState } from 'react';
 export default function ProjectPage() {
   const { toast } = useToast();
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('projects');
   
   const { 
     data: projects = [], 
@@ -90,38 +95,109 @@ export default function ProjectPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold text-foreground">Проект студента</h2>
         <Button 
           onClick={() => setShowUploadModal(true)}
           data-testid="upload-project-btn"
-          className="font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
+          className="font-medium bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Загрузить репозиторий
+          <span className="hidden sm:inline">Загрузить репозиторий</span>
+          <span className="sm:hidden">Загрузить</span>
         </Button>
       </div>
       
-      {projects.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-card-foreground mb-2">
-            Нет проектов
-          </h3>
-          <p className="text-muted-foreground">
-            Проекты будут отображаться здесь после их создания
-          </p>
-        </div>
-      ) : (
-        <div className="bg-card border border-border rounded-lg divide-y divide-border">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
-      )}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="projects" className="flex items-center space-x-1 sm:space-x-2">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Проекты</span>
+            <span className="sm:hidden">Проекты</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="report" 
+            className="flex items-center space-x-1 sm:space-x-2"
+            disabled={!selectedProjectId}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Отчёт</span>
+            <span className="sm:hidden">Отчёт</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="reviewer" 
+            className="flex items-center space-x-1 sm:space-x-2"
+            disabled={!selectedProjectId}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span className="hidden sm:inline">Ревьюер</span>
+            <span className="sm:hidden">Ревьюер</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="projects" className="mt-6">
+          {projects.length === 0 ? (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-card-foreground mb-2">
+                Нет проектов
+              </h3>
+              <p className="text-muted-foreground">
+                Проекты будут отображаться здесь после их создания
+              </p>
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-lg divide-y divide-border overflow-hidden">
+              {projects.map((project) => (
+                <ProjectCard 
+                  key={project.id} 
+                  project={project} 
+                  onShowReport={() => {
+                    setSelectedProjectId(project.id);
+                    setActiveTab('report');
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="report" className="mt-6">
+          {selectedProjectId ? (
+            <ReportTab projectId={selectedProjectId} />
+          ) : (
+            <div className="text-center py-12">
+              <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-card-foreground mb-2">
+                Выберите проект
+              </h3>
+              <p className="text-muted-foreground">
+                Выберите проект из списка, чтобы просмотреть его отчёт
+              </p>
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="reviewer" className="mt-6">
+          {selectedProjectId ? (
+            <ReviewerTab projectId={selectedProjectId} />
+          ) : (
+            <div className="text-center py-12">
+              <UserCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-card-foreground mb-2">
+                Выберите проект
+              </h3>
+              <p className="text-muted-foreground">
+                Выберите проект из списка, чтобы просмотреть отчёт ревьюера
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <UploadProjectModal 
         open={showUploadModal} 
-        onClose={() => setShowUploadModal(false)} 
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={() => refetch()}
       />
     </div>
   );

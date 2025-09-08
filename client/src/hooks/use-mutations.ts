@@ -90,7 +90,8 @@ export function useAddComment(projectId: string) {
         author: 'Текущий пользователь',
         authorInitials: 'ТП',
         timestamp: 'только что',
-        line: newComment.line || 1,
+        line: newComment.line,
+        file: newComment.file,
         text: newComment.text,
         status: 'suggestion'
       };

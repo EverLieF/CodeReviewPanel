@@ -1,10 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, RefreshCw } from 'lucide-react';
 import { TimelineEventComponent } from '../components/timeline-event';
+import { RunsHistory } from '../components/runs-history';
+import { TimelineFeed } from '../components/timeline-feed';
 import { useProjectStore } from '../store/project-store';
 import { useQuery } from '@tanstack/react-query';
-import { getTimelineEvents } from '../lib/api';
+import { getTimelineEvents, getTimelineEventsData, getAllRuns } from '../lib/api';
 import { useToast } from '../hooks/use-toast';
 
 export default function HistoryPage() {
@@ -13,89 +16,43 @@ export default function HistoryPage() {
 
   const { 
     data: timelineEvents = [], 
-    isLoading, 
-    isError, 
-    refetch 
+    isLoading: timelineLoading, 
+    isError: timelineError, 
+    refetch: refetchTimeline 
   } = useQuery({
     queryKey: ['timeline'],
     queryFn: getTimelineEvents,
   });
 
-  if (isError) {
-    return (
-      <div>
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              История изменений
-            </h2>
-            <p className="text-muted-foreground">
-              Хронология событий и изменений в проекте
-            </p>
-          </div>
-        </div>
-        
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-card-foreground mb-2">
-            Ошибка загрузки истории
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            Не удалось загрузить историю изменений
-          </p>
-          <Button 
-            onClick={() => {
-              refetch();
-              toast({
-                title: "Повторная попытка",
-                description: "Пытаемся загрузить историю снова...",
-              });
-            }}
-            variant="outline"
-            className="font-medium"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Повторить
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const { 
+    data: timelineEventsData = [], 
+    isLoading: timelineDataLoading, 
+    isError: timelineDataError, 
+    refetch: refetchTimelineData 
+  } = useQuery({
+    queryKey: ['timeline-data'],
+    queryFn: getTimelineEventsData,
+  });
 
-  if (isLoading) {
-    return (
-      <div>
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              История изменений
-            </h2>
-            <p className="text-muted-foreground">
-              Хронология событий и изменений в проекте
-            </p>
-          </div>
-        </div>
-        
-        <div className="space-y-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-card border border-border rounded-lg p-6">
-              <div className="flex items-start space-x-4">
-                <Skeleton className="w-10 h-10 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <div className="flex items-center space-x-4 mt-3">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const { 
+    data: allRuns = [], 
+    isLoading: runsLoading, 
+    isError: runsError, 
+    refetch: refetchRuns 
+  } = useQuery({
+    queryKey: ['runs'],
+    queryFn: getAllRuns,
+  });
+
+  const handleRetry = () => {
+    refetchTimeline();
+    refetchTimelineData();
+    refetchRuns();
+    toast({
+      title: "Повторная попытка",
+      description: "Пытаемся загрузить данные снова...",
+    });
+  };
 
   return (
     <div>
@@ -105,7 +62,7 @@ export default function HistoryPage() {
             История изменений
           </h2>
           <p className="text-muted-foreground">
-            Хронология событий и изменений в проекте
+            Хронология событий и прогонов в проектах
           </p>
         </div>
         <Button 
@@ -118,26 +75,54 @@ export default function HistoryPage() {
         </Button>
       </div>
       
-      {timelineEvents.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-card-foreground mb-2">
-            История пуста
-          </h3>
-          <p className="text-muted-foreground">
-            События будут отображаться здесь по мере их возникновения
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {timelineEvents.map((event, index) => (
-            <TimelineEventComponent 
-              key={event.id} 
-              event={event} 
-              isLast={index === timelineEvents.length - 1}
-            />
-          ))}
-        </div>
-      )}
+      <Tabs defaultValue="timeline" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="timeline">Лента событий</TabsTrigger>
+          <TabsTrigger value="runs">История прогонов</TabsTrigger>
+          <TabsTrigger value="legacy">Классический вид</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="timeline" className="space-y-6">
+          <TimelineFeed 
+            events={timelineEventsData}
+            isLoading={timelineDataLoading}
+            isError={timelineDataError}
+            onRetry={handleRetry}
+          />
+        </TabsContent>
+        
+        <TabsContent value="runs" className="space-y-6">
+          <RunsHistory 
+            projectRuns={allRuns}
+            isLoading={runsLoading}
+            isError={runsError}
+            onRetry={handleRetry}
+          />
+        </TabsContent>
+        
+        <TabsContent value="legacy" className="space-y-6">
+          {timelineEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-card-foreground mb-2">
+                История пуста
+              </h3>
+              <p className="text-muted-foreground">
+                События будут отображаться здесь по мере их возникновения
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {timelineEvents.map((event, index) => (
+                <TimelineEventComponent 
+                  key={event.id} 
+                  event={event} 
+                  isLast={index === timelineEvents.length - 1}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

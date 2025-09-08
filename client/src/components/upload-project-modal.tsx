@@ -4,30 +4,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Folder, FileText } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Upload, X, Folder, FileText, Github, Link } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { uploadProject } from '../lib/api';
+import { uploadZip, uploadRepoUrl } from '../lib/api';
 import { FileNode } from '../lib/types';
 
 interface UploadProjectModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
+export function UploadProjectModal({ open, onClose, onSuccess }: UploadProjectModalProps) {
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [githubUrl, setGithubUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState('zip');
   const { toast } = useToast();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setUploadedFiles(prev => [...prev, ...files]);
+    const file = (event.target.files && event.target.files[0]) || null;
+    setUploadedFile(file);
   };
 
-  const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  const removeFile = () => {
+    setUploadedFile(null);
   };
 
   const buildFileTree = (files: File[]): FileNode[] => {
@@ -83,10 +87,19 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
       return;
     }
 
-    if (uploadedFiles.length === 0) {
+    if (activeTab === 'zip' && !uploadedFile) {
       toast({
         title: 'Ошибка',
-        description: 'Выберите файлы для загрузки',
+        description: 'Выберите ZIP-файл для загрузки',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (activeTab === 'url' && !githubUrl.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Введите URL GitHub репозитория',
         variant: 'destructive',
       });
       return;
@@ -95,18 +108,17 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
     setIsUploading(true);
     
     try {
-      // Создаем FormData для загрузки файлов
-      const formData = new FormData();
-      formData.append('name', projectName);
-      formData.append('description', projectDescription || 'Загруженный репозиторий');
+      let result;
       
-      // Добавляем все файлы
-      uploadedFiles.forEach(file => {
-        formData.append('files', file);
-      });
-
-      // Используем новую API-функцию для загрузки
-      await uploadProject(formData);
+      if (activeTab === 'zip') {
+        // Создаем FormData для загрузки ZIP
+        const formData = new FormData();
+        formData.append('file', uploadedFile!);
+        result = await uploadZip(formData);
+      } else {
+        // Загружаем по GitHub URL
+        result = await uploadRepoUrl({ repoUrl: githubUrl });
+      }
       
       toast({
         title: 'Успех',
@@ -116,7 +128,12 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
       // Reset form
       setProjectName('');
       setProjectDescription('');
-      setUploadedFiles([]);
+      setUploadedFile(null);
+      setGithubUrl('');
+      setActiveTab('zip');
+      
+      // Вызываем callback для обновления списка проектов
+      onSuccess?.();
       onClose();
     } catch (error) {
       toast({
@@ -166,63 +183,90 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
             </div>
           </div>
 
-          {/* File Upload */}
-          <div className="space-y-4">
-            <Label>Файлы репозитория</Label>
-            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-              <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Перетащите файлы сюда или нажмите для выбора
-                </p>
-                <input
-                  type="file"
-                  multiple
-                  {...({ webkitdirectory: "" } as any)}
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="file-upload"
-                  data-testid="file-upload-input"
-                />
-                <Label
-                  htmlFor="file-upload"
-                  className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-                >
-                  Выбрать папку
-                </Label>
-              </div>
-            </div>
-          </div>
-
-          {/* Uploaded Files List */}
-          {uploadedFiles.length > 0 && (
-            <div className="space-y-2">
-              <Label>Загруженные файлы ({uploadedFiles.length})</Label>
-              <div className="max-h-40 overflow-y-auto border border-border rounded-md p-2">
-                {uploadedFiles.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between py-1 px-2 hover:bg-muted rounded text-sm"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <FileText className="w-4 h-4 text-blue-500" />
-                      <span className="font-mono text-xs">
-                        {file.webkitRelativePath || file.name}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                      className="h-6 w-6 p-0"
+          {/* Upload Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="zip" className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Файл ZIP
+              </TabsTrigger>
+              <TabsTrigger value="url" className="flex items-center gap-2">
+                <Github className="w-4 h-4" />
+                GitHub URL
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="zip" className="space-y-4">
+              <div className="space-y-4">
+                <Label>Файлы репозитория</Label>
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Выберите ZIP-архив проекта для загрузки
+                    </p>
+                    <input
+                      type="file"
+                      accept=".zip,application/zip,application/x-zip-compressed"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="file-upload"
+                      data-testid="file-upload-input"
+                    />
+                    <Label
+                      htmlFor="file-upload"
+                      className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
                     >
-                      <X className="w-3 h-3" />
-                    </Button>
+                      Выбрать ZIP
+                    </Label>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          )}
+
+              {/* Uploaded Files List */}
+              {uploadedFile && (
+                <div className="space-y-2">
+                  <Label>Выбранный файл</Label>
+                  <div className="max-h-40 overflow-y-auto border border-border rounded-md p-2">
+                    <div className="flex items-center justify-between py-1 px-2 hover:bg-muted rounded text-sm">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                        <span className="font-mono text-xs">
+                          {uploadedFile.name}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeFile}
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="url" className="space-y-4">
+              <div className="space-y-4">
+                <Label htmlFor="github-url">URL GitHub репозитория *</Label>
+                <div className="space-y-2">
+                  <Input
+                    id="github-url"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    placeholder="https://github.com/username/repository"
+                    data-testid="github-url-input"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Введите полный URL репозитория GitHub (например: https://github.com/username/repository)
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* Actions */}
           <div className="flex justify-end space-x-2">
@@ -234,7 +278,7 @@ export function UploadProjectModal({ open, onClose }: UploadProjectModalProps) {
               disabled={isUploading}
               data-testid="submit-upload"
             >
-              {isUploading ? 'Загрузка...' : 'Создать проект'}
+              {isUploading ? 'Загрузка...' : (activeTab === 'zip' ? 'Загрузить ZIP' : 'Загрузить из GitHub')}
             </Button>
           </div>
         </div>

@@ -20,7 +20,8 @@ export interface ReviewComment {
   author: string;
   authorInitials: string;
   timestamp: string;
-  line: number;
+  line?: number;
+  file?: string;
   text: string;
   status: 'needs-fix' | 'suggestion' | 'resolved';
 }
@@ -51,8 +52,38 @@ export interface CodeLine {
   content: string;
   type: 'normal' | 'added' | 'removed';
   highlighted?: boolean;
+  hasIssues?: boolean;
+  issues?: string[];
+  comments?: ReviewComment[];
 }
 
 export type Theme = 'light' | 'dark';
 
 export type CommentFilter = 'all' | 'needs-fix' | 'suggestion' | 'resolved';
+
+export interface Run {
+  id: string;
+  submissionId: string;
+  createdAt: string;
+  toolchain: string;
+  status: 'queued' | 'running' | 'passed' | 'failed' | 'ready' | 'errors';
+  durationMs?: number;
+  reportId?: string;
+}
+
+export interface ProjectRun {
+  projectId: string;
+  projectName: string;
+  runs: Run[];
+}
+
+export interface TimelineEventData {
+  id: string;
+  type: 'uploaded' | 'run_started' | 'run_finished' | 'checks_ready' | 'feedback_ready';
+  projectId: string;
+  submissionId: string;
+  runId?: string;
+  message: string;
+  details: Record<string, any>;
+  createdAt: string;
+}
