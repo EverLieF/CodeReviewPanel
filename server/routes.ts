@@ -743,6 +743,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         byFile[rel].push({ line: err.line, code: err.code, message: err.message });
       }
 
+      // ---- LLM issues merge (optional) ----
+      try {
+        const llmIssuesPath = path.join(runArtifactsDir, "llm_issues.json");
+        if (fs.existsSync(llmIssuesPath)) {
+          const payload = JSON.parse(fs.readFileSync(llmIssuesPath, "utf-8"));
+          const issues: Array<{
+            filePath: string;
+            snippet: string;
+            ranges: Array<{ startLine: number; startCol: number; endLine: number; endCol: number }>;
+            message?: string;
+            errorNumber?: number;
+          }> = payload?.issues ?? [];
+
+          for (const iss of issues) {
+            const rel = (iss.filePath || "").replace(/\\/g, "/");
+            if (!rel) continue;
+
+            // Убедимся, что массив для файла существует
+            if (!byFile[rel]) byFile[rel] = [];
+
+            // Разворачиваем каждый диапазон в пометки по строкам
+            for (const r of iss.ranges ?? []) {
+              const start = Math.max(1, Math.min(r.startLine, r.endLine));
+              const end   = Math.max(r.startLine, r.endLine);
+              const baseMsg = iss.message && iss.message.trim().length > 0
+                ? iss.message.trim()
+                : "Проблемный фрагмент (LLM)";
+
+              for (let line = start; line <= end; line++) {
+                // Избегаем дублей одинаковых сообщений на одной строке
+                const exists = byFile[rel].some(e => e.line === line && e.message === baseMsg);
+                if (!exists) {
+                  byFile[rel].push({
+                    line,
+                    code: "LLM",
+                    message: `AI: ${baseMsg}`
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Не ломаем весь репорт, если файла нет или формат неожиданен
+        console.warn("[reviewer-report] LLM issues merge skipped:", (e as any)?.message || e);
+      }
+      // ---- /LLM issues merge ----
+
       return res.json({
         checks: checks.staticCheck,
         feedback,
