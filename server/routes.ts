@@ -734,6 +734,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const checks = JSON.parse(fs.readFileSync(checksPath, "utf-8"));
       const feedback = JSON.parse(fs.readFileSync(feedbackPath, "utf-8"));
 
+      // Собираем только LLM-подсветки, если включён LLM-ONLY
+      if (config.enableLlmOnly) {
+        const byFile: Record<string, Array<{ line: number; code: string; message: string }>> = {};
+        const issuesPath = path.join(runArtifactsDir, "llm_issues.json");
+
+        if (fs.existsSync(issuesPath)) {
+          const payload = JSON.parse(fs.readFileSync(issuesPath, "utf8"));
+          const issues = payload?.issues ?? [];
+          for (const iss of issues) {
+            const rel = String(iss.filePath || "").replace(/\\/g, "/");
+            if (!rel) continue;
+            if (!byFile[rel]) byFile[rel] = [];
+            for (const r of iss.ranges ?? []) {
+              const start = Math.max(1, Math.min(r.startLine, r.endLine));
+              const end   = Math.max(r.startLine, r.endLine);
+              const baseMsg = iss.message?.trim() || "Проблемный фрагмент (LLM)";
+              for (let line = start; line <= end; line++) {
+                const dup = byFile[rel].some(e => e.line === line && e.message === baseMsg);
+                if (!dup) byFile[rel].push({ line, code: "LLM", message: baseMsg });
+              }
+            }
+          }
+        }
+
+        // Возвращаем пустые checks/feedback, только LLM-подсветки
+        return res.json({ checks: null, feedback: null, byFile });
+      }
+
+      // ---- ниже остаётся прежняя логика для не-LLM-ONLY режима ----
+      
       // byFile из lint ошибок
       const workRoot = path.resolve(config.workDir, projectId, submission.id);
       const byFile: Record<string, Array<{ line: number; code: string; message: string }>> = {};

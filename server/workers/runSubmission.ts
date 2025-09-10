@@ -83,21 +83,33 @@ export async function runSubmissionOrchestrator(params: { projectId: string; sub
     }
 
     let checks: any;
-    try {
-      // 3) Статические проверки (+pytest если ENABLE_PYTEST=true)
-      checks = await collectChecks(params.runId, workRoot);
-      // checks.json уже сохранён collectChecks
-    } catch (error) {
-      throw new Error(`Failed to collect checks: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
     let feedback: any;
-    try {
-      // 4) Mock feedback
-      feedback = generateMockFeedback(checks.staticCheck);
+    
+    if (!config.enableLlmOnly) {
+      try {
+        // 3) Статические проверки (+pytest если ENABLE_PYTEST=true)
+        checks = await collectChecks(params.runId, workRoot);
+        // checks.json уже сохранён collectChecks
+      } catch (error) {
+        throw new Error(`Failed to collect checks: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
+      try {
+        // 4) Mock feedback
+        feedback = generateMockFeedback(checks.staticCheck);
+        writeJsonFileSync(path.join(runArtifactsDir, "feedback.json"), feedback);
+      } catch (error) {
+        throw new Error(`Failed to generate feedback: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } else {
+      // Пропускаем статические проверки — LLM всё делает сама
+      console.info("[LLM-ONLY] skipping static checks and tests");
+      
+      // Создаём пустые структуры для совместимости
+      checks = { staticCheck: { tests: { passed: 0, failed: 0, items: [] }, lint: { errors: [] }, metrics: {}, requirements: {} } };
+      feedback = { summary: "Анализ выполнен с помощью LLM" };
+      writeJsonFileSync(path.join(runArtifactsDir, "checks.json"), checks);
       writeJsonFileSync(path.join(runArtifactsDir, "feedback.json"), feedback);
-    } catch (error) {
-      throw new Error(`Failed to generate feedback: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     if (config.enableLlm) {
@@ -141,7 +153,9 @@ export async function runSubmissionOrchestrator(params: { projectId: string; sub
 
     try {
       // 5) Формирование отчётов
-      const hasProblems = (checks.staticCheck.tests.failed ?? 0) > 0 || (checks.staticCheck.lint.errors?.length ?? 0) > 0;
+      const hasProblems = config.enableLlmOnly 
+        ? false // В LLM-ONLY режиме проблемы определяются только LLM
+        : (checks.staticCheck.tests.failed ?? 0) > 0 || (checks.staticCheck.lint.errors?.length ?? 0) > 0;
 
       const studentReport: Report = {
         id: params.runId + ":student",
@@ -154,11 +168,16 @@ export async function runSubmissionOrchestrator(params: { projectId: string; sub
 
       // Группировка проблем по файлам для ревьюера
       const lintByFile: Record<string, Array<{ line: number; code: string; message: string }>> = {};
-      for (const err of checks.staticCheck.lint.errors) {
-        const rel = path.relative(workRoot, err.file).replace(/\\/g, "/");
-        if (!lintByFile[rel]) lintByFile[rel] = [];
-        lintByFile[rel].push({ line: err.line, code: err.code, message: err.message });
+      if (!config.enableLlmOnly) {
+        // В обычном режиме используем статические проверки
+        for (const err of checks.staticCheck.lint.errors) {
+          const rel = path.relative(workRoot, err.file).replace(/\\/g, "/");
+          if (!lintByFile[rel]) lintByFile[rel] = [];
+          lintByFile[rel].push({ line: err.line, code: err.code, message: err.message });
+        }
       }
+      // В LLM-ONLY режиме lintByFile остаётся пустым, проблемы будут показаны через LLM issues
+      
       const reviewerDetails = {
         kind: "reviewer",
         tests: {
@@ -174,7 +193,9 @@ export async function runSubmissionOrchestrator(params: { projectId: string; sub
         id: params.runId + ":reviewer",
         runId: params.runId,
         createdAt: new Date().toISOString(),
-        summary: hasProblems ? "Есть проблемы, требуется внимание ревьюера" : "Проблем не найдено",
+        summary: config.enableLlmOnly 
+          ? "Анализ выполнен с помощью LLM" 
+          : (hasProblems ? "Есть проблемы, требуется внимание ревьюера" : "Проблем не найдено"),
         details: reviewerDetails,
         status: hasProblems ? "error" : "success",
       };

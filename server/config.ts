@@ -36,12 +36,16 @@ export const config = {
   maxUploadMb: parseInt(requireEnv("MAX_UPLOAD_MB", "100"), 10),
   enablePytest: requireEnv("ENABLE_PYTEST", "false").toLowerCase() === "true",
   enableLlm: (process.env.ENABLE_LLM ?? "false").toLowerCase() === "true",
+  enableLlmOnly: (process.env.ENABLE_LLM_ONLY ?? "false").toLowerCase() === "true",
   yandex: {
     apiKey: optionalEnv("YC_API_KEY"),
     folderId: optionalEnv("YC_FOLDER_ID"),
     modelUri: process.env.YC_MODEL_URI || (process.env.YC_FOLDER_ID ? `gpt://${process.env.YC_FOLDER_ID}/yandexgpt-lite/latest` : undefined)
   }
 };
+
+// Если включён enableLlmOnly — считаем, что enableLlm тоже логически включён:
+if (config.enableLlmOnly) (config as any).enableLlm = true;
 
 export type AppConfig = typeof config;
 
