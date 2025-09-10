@@ -169,6 +169,89 @@ curl -X POST http://localhost:3000/api/dev/llm \
   -d '{ "system":"Твой промпт", "user":"Тестовое сообщение" }'
 ```
 
+## LLM Issues Artifact
+
+### Что такое llm_issues.json
+
+Файл `data/artifacts/<runId>/llm_issues.json` содержит результаты парсинга отчета LLM на предмет найденных проблем в коде. Этот файл создается автоматически при обработке отчета через функцию `extractIssuesFromReport()`.
+
+### Формат JSON
+
+```json
+{
+  "issues": [
+    {
+      "filePath": "src/main.py",
+      "snippet": "def calculate_sum(a, b):\n    return a + b",
+      "ranges": [
+        {
+          "startLine": 10,
+          "startCol": 0,
+          "endLine": 12,
+          "endCol": 15
+        }
+      ],
+      "message": "Функция не обрабатывает случай с None значениями",
+      "errorNumber": 1
+    },
+    {
+      "filePath": "src/utils.py",
+      "snippet": "import os\nprint(os.getenv('API_KEY'))",
+      "ranges": [
+        {
+          "startLine": 5,
+          "startCol": 0,
+          "endLine": 6,
+          "endCol": 30
+        }
+      ],
+      "message": "Прямой вывод секретных данных в консоль",
+      "errorNumber": 2
+    }
+  ]
+}
+```
+
+### Структура объекта Issue
+
+- **`filePath`** (string) - путь к файлу относительно корня проекта
+- **`snippet`** (string) - фрагмент кода, в котором найдена проблема
+- **`ranges`** (array) - массив диапазонов в файле:
+  - **`startLine`** (number) - начальная строка
+  - **`startCol`** (number) - начальная колонка
+  - **`endLine`** (number) - конечная строка
+  - **`endCol`** (number) - конечная колонка
+- **`message`** (string, optional) - комментарий из отчета LLM
+- **`errorNumber`** (number, optional) - номер ошибки из отчета
+
+### Как проверить парсер
+
+В режиме разработки доступен dev-эндпойнт для ручной проверки парсера:
+
+```bash
+curl -X POST http://localhost:3000/api/dev/llm/parse \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "runId": "test-run-123",
+    "reportText": "Ошибка №1 в файле src/main.py:\nФункция не обрабатывает случай с None значениями\n```python\ndef calculate_sum(a, b):\n    return a + b\n```",
+    "files": [
+      {
+        "path": "src/main.py",
+        "content": "def calculate_sum(a, b):\n    return a + b\n\nif __name__ == \"__main__\":\n    print(calculate_sum(1, 2))"
+      }
+    ]
+  }'
+```
+
+Ответ:
+```json
+{
+  "ok": true,
+  "issues": [...],
+  "outPath": "/path/to/data/artifacts/test-run-123/llm_issues.json"
+}
+```
+
 ## Структура проекта
 
 ```

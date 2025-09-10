@@ -1,5 +1,6 @@
 import { yandexCompletion } from "./yandex";
 import { getReportSystemPromptFromHtml, getClassifierSystemPromptFromHtml } from "./htmlPromptLoader";
+import { extractIssuesFromReport } from "./reportParser";
 
 /**
  * Генерирует отчет для студента с использованием LLM

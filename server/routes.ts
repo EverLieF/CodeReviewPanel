@@ -785,6 +785,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (e: any) { next(e); }
     });
+
+    app.post("/api/dev/llm/parse", async (req, res, next) => {
+      try {
+        const { runId, reportText, files } = req.body || {};
+        if (!runId || !reportText || !Array.isArray(files)) {
+          return res.status(400).json({ ok:false, error:"runId, reportText, files[] required" });
+        }
+        const { extractIssuesFromReport } = await import("./llm/reportParser");
+        const result = await extractIssuesFromReport(runId, reportText, files);
+        res.json({ ok: true, ...result });
+      } catch (e:any) { next(e); }
+    });
   }
 
   const httpServer = createServer(app);

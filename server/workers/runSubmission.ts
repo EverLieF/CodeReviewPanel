@@ -2,9 +2,11 @@ import fs from "fs";
 import path from "path";
 import { JsonStore } from "../store/db";
 import { config } from "../config";
-import { extractZipToRunDir } from "../services/archive";
+import { extractZipToRunDir, buildFileTree } from "../services/archive";
 import { collectChecks } from "../services/collect";
 import { generateMockFeedback } from "../llm/mock";
+import { generateStudentReport, classifyReport } from "../llm/pipeline";
+import { extractIssuesFromReport } from "../llm/reportParser";
 import { errorHandler } from "../services/error-handler";
 import type { Submission, SubmissionRun, Report } from "@shared/types";
 
@@ -97,6 +99,35 @@ export async function runSubmissionOrchestrator(params: { projectId: string; sub
       throw new Error(`Failed to generate feedback: ${error instanceof Error ? error.message : String(error)}`);
     }
 
+    // 4.5) LLM отчёты
+    let reportText: string | undefined;
+    let verdictText: string | undefined;
+    try {
+      // Генерируем отчёт для студента с помощью LLM
+      const userReport = JSON.stringify({
+        staticCheck: checks.staticCheck,
+        detection
+      }, null, 2);
+      
+      reportText = await generateStudentReport(userReport);
+      await fs.promises.writeFile(
+        path.join(runArtifactsDir, "llm_report.txt"),
+        reportText,
+        "utf-8"
+      );
+
+      // Классифицируем отчёт
+      verdictText = await classifyReport(reportText);
+      await fs.promises.writeFile(
+        path.join(runArtifactsDir, "llm_verdict.txt"),
+        verdictText,
+        "utf-8"
+      );
+    } catch (error) {
+      // LLM ошибки не критичны, логируем и продолжаем
+      console.warn(`LLM processing failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
     try {
       // 5) Формирование отчётов
       const hasProblems = (checks.staticCheck.tests.failed ?? 0) > 0 || (checks.staticCheck.lint.errors?.length ?? 0) > 0;
@@ -138,6 +169,18 @@ export async function runSubmissionOrchestrator(params: { projectId: string; sub
       };
 
       await reportStore.upsertMany([studentReport, reviewerReport]);
+
+      // 6) Парсинг LLM отчёта (если он был сгенерирован)
+      if (reportText) {
+        try {
+          // Получаем список файлов проекта для парсера
+          const snapshot = await buildFileTree(workRoot);
+          await extractIssuesFromReport(params.runId, reportText, snapshot.files);
+        } catch (error) {
+          // Ошибки парсинга не критичны, логируем и продолжаем
+          console.warn(`LLM report parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
 
       // Вернуть идентификаторы, чтобы вызывающий код мог обновить SubmissionRun
       return { studentReportId: studentReport.id, reviewerReportId: reviewerReport.id };
