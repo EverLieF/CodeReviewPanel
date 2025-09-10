@@ -1,4 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "node:path";
+import fs from "node:fs";
 import { registerRoutes } from "./routes";
 import { config } from "./config";
 import { setupVite, serveStatic, log } from "./vite";
@@ -36,6 +38,20 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+// --- health endpoints (поставлены ДО статической отдачи) ---
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+app.get("/readyz", (_req, res) => {
+  // Грубая проверка: можем ли читать/писать артефакты
+  try {
+    const dir = config.artifactsDir || path.join(process.cwd(), "data", "artifacts");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.accessSync(dir, fs.constants.W_OK);
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message || "fs access error" });
+  }
 });
 
 (async () => {
@@ -77,7 +93,17 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Раздача статики для продакшена
+    const publicDir = path.join(process.cwd(), "dist", "public");
+    if (fs.existsSync(publicDir)) {
+      app.use(express.static(publicDir));
+      // SPA fallback: все неизвестные пути — на index.html
+      app.get("*", (_req, res) => {
+        res.sendFile(path.join(publicDir, "index.html"));
+      });
+    } else {
+      log(`Warning: Static directory not found: ${publicDir}`);
+    }
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT

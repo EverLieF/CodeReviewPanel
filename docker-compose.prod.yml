@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: code-review-panel:prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./server/.env
+    environment:
+      - NODE_ENV=production
+      # на проде включай:
+      # - ENABLE_LLM=true
+      # - ENABLE_LLM_ONLY=true
+    volumes:
+      - ./data:/app/data

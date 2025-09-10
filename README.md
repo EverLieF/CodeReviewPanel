@@ -96,6 +96,101 @@ npm run build
 npm run preview
 ```
 
+## Деплой в продакшен
+
+### Docker
+
+Проект готов к деплою с помощью Docker. Все необходимые файлы уже созданы:
+
+- `Dockerfile` - многоэтапная сборка для оптимизации размера образа
+- `docker-compose.prod.yml` - конфигурация для продакшена
+- `.dockerignore` - исключения для Docker контекста
+
+#### Сборка и запуск
+
+```bash
+# Сборка образа
+docker build -t code-review-panel:prod .
+
+# Запуск с docker-compose
+docker compose -f docker-compose.prod.yml up --build
+
+# Запуск в фоне
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+#### Проверка работоспособности
+
+После запуска приложение будет доступно по адресу: http://localhost:3000
+
+Проверить health endpoints:
+```bash
+# Проверка здоровья приложения
+curl http://localhost:3000/healthz
+
+# Проверка готовности (доступ к файловой системе)
+curl http://localhost:3000/readyz
+```
+
+#### Переменные окружения для продакшена
+
+Создайте файл `server/.env` с необходимыми переменными:
+
+```bash
+# Основные настройки
+NODE_ENV=production
+PORT=3000
+
+# Пути к директориям
+UPLOAD_DIR=./data/uploads
+WORK_DIR=./data/work
+ARTIFACTS_DIR=./data/artifacts
+
+# Лимиты
+MAX_UPLOAD_MB=100
+
+# LLM настройки (опционально)
+ENABLE_LLM=true
+ENABLE_LLM_ONLY=false
+ENABLE_PYTEST=false
+
+# YandexGPT (если используется LLM)
+YC_API_KEY=your_yandex_api_key
+YC_FOLDER_ID=your_folder_id
+```
+
+#### Volumes
+
+В `docker-compose.prod.yml` настроен volume для данных:
+- `./data:/app/data` - локальная папка `data` монтируется в контейнер
+
+Это обеспечивает сохранность:
+- Загруженных проектов (`uploads/`)
+- Временных файлов (`work/`)
+- Артефактов анализа (`artifacts/`)
+
+#### Health Checks
+
+Docker контейнер настроен с автоматическими health checks:
+- Проверка каждые 30 секунд
+- Таймаут 3 секунды
+- Период запуска 20 секунд
+- Максимум 3 попытки
+
+#### Мониторинг
+
+Для мониторинга используйте:
+```bash
+# Статус контейнера
+docker compose -f docker-compose.prod.yml ps
+
+# Логи приложения
+docker compose -f docker-compose.prod.yml logs -f app
+
+# Статистика ресурсов
+docker stats
+```
+
 ## API Endpoints
 
 Все API запросы начинаются с `/api`:
