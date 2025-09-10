@@ -799,6 +799,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // GET /api/projects/:id/run/:runId/llm-artifacts
+  app.get("/api/projects/:id/run/:runId/llm-artifacts", async (req, res, next) => {
+    try {
+      const { id: projectId, runId } = req.params as any;
+
+      const runArtifactsDir = path.join(config.artifactsDir, runId);
+      const reportPath = path.join(runArtifactsDir, "llm_report.txt");
+      const verdictPath = path.join(runArtifactsDir, "llm_verdict.txt");
+      const issuesPath = path.join(runArtifactsDir, "llm_issues.json");
+
+      if (!fs.existsSync(reportPath) || !fs.existsSync(verdictPath)) {
+        return res.status(404).json({ message: "LLM artifacts not found" });
+      }
+
+      const reportText = fs.readFileSync(reportPath, "utf8");
+      const verdictText = fs.readFileSync(verdictPath, "utf8");
+      const issues = fs.existsSync(issuesPath)
+        ? JSON.parse(fs.readFileSync(issuesPath, "utf8")).issues ?? []
+        : [];
+
+      res.json({ projectId, runId, reportText, verdictText, issues });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // GET /api/projects/:id/run/:runId/llm-issues — только подсветки (легковесно для фронта)
+  app.get("/api/projects/:id/run/:runId/llm-issues", async (req, res, next) => {
+    try {
+      const { runId } = req.params as any;
+      const issuesPath = path.join(config.artifactsDir, runId, "llm_issues.json");
+      if (!fs.existsSync(issuesPath)) return res.json({ issues: [] });
+      const payload = JSON.parse(fs.readFileSync(issuesPath, "utf8"));
+      res.json({ issues: payload.issues ?? [] });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

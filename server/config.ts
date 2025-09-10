@@ -35,6 +35,7 @@ export const config = {
   artifactsDir: resolveDir(requireEnv("ARTIFACTS_DIR", "./data/artifacts")),
   maxUploadMb: parseInt(requireEnv("MAX_UPLOAD_MB", "100"), 10),
   enablePytest: requireEnv("ENABLE_PYTEST", "false").toLowerCase() === "true",
+  enableLlm: (process.env.ENABLE_LLM ?? "false").toLowerCase() === "true",
   yandex: {
     apiKey: optionalEnv("YC_API_KEY"),
     folderId: optionalEnv("YC_FOLDER_ID"),

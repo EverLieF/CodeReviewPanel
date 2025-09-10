@@ -109,7 +109,13 @@ npm run preview
 - `GET /api/timeline` - события истории
 - `GET /api/projects/:id/files/:filePath` - получение файла
 
-## LLM (YandexGPT)
+## LLM
+
+* ENABLE_LLM=true включает прогон Yandex LLM (промпты берутся из HTML через лоадер).
+* Артефакты: data/artifacts/<runId>/{ llm_report.txt, llm_verdict.txt, llm_issues.json }.
+* Эндпойнты: 
+  - GET /api/projects/:id/run/:runId/llm-artifacts
+  - GET /api/projects/:id/run/:runId/llm-issues
 
 ### Переменные окружения
 
