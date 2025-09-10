@@ -118,6 +118,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DELETE /api/projects/:id — удалить проект
+  app.delete("/api/projects/:id", async (req, res, next) => {
+    try {
+      const projectId = req.params.id;
+      const project = await projectStore.get(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Удаляем проект из хранилища
+      const deleted = await projectStore.remove(projectId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Удаляем связанные сабмишены
+      const submissions = await submissionStore.list();
+      const projectSubmissions = submissions.filter(s => s.projectId === projectId);
+      for (const submission of projectSubmissions) {
+        await submissionStore.remove(submission.id);
+      }
+
+      // Удаляем связанные комментарии
+      const comments = await commentsStore.list();
+      const projectComments = comments.filter(c => c.projectId === projectId);
+      for (const comment of projectComments) {
+        await commentsStore.remove(comment.id);
+      }
+
+      // Удаляем файлы проекта из файловой системы
+      try {
+        const projectRootDir = await getProjectRootDir(projectId);
+        if (fs.existsSync(projectRootDir)) {
+          fs.rmSync(projectRootDir, { recursive: true, force: true });
+        }
+      } catch (fsError) {
+        console.warn(`Failed to delete project files for ${projectId}:`, fsError);
+      }
+
+      // Логируем событие удаления
+      await timelineService.addEvent("deleted", {
+        projectId,
+        message: `Проект "${project.name}" удален`,
+        details: { projectName: project.name }
+      });
+
+      res.json({ message: "Project deleted successfully" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // COMMENTS API
   // Модель комментария: { id, projectId, file, line, severity, text, resolved, createdAt }
 

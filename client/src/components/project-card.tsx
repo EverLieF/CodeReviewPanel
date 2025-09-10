@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Download, Folder, FileText, CheckCircle, Play, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Folder, FileText, CheckCircle, Play, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useProjectStore } from '../store/project-store';
@@ -10,6 +10,7 @@ import { useRunCheck } from '../hooks/use-run-check';
 interface ProjectCardProps {
   project: Project;
   onShowReport?: () => void;
+  onDelete?: (projectId: string) => void;
 }
 
 function FileTreeNode({ node, depth = 0 }: { node: FileNode; depth?: number }) {
@@ -42,7 +43,7 @@ function FileTreeNode({ node, depth = 0 }: { node: FileNode; depth?: number }) {
   );
 }
 
-export function ProjectCard({ project, onShowReport }: ProjectCardProps) {
+export function ProjectCard({ project, onShowReport, onDelete }: ProjectCardProps) {
   const { expandedProjects, toggleProjectExpansion, downloadProject } = useProjectStore();
   const isExpanded = expandedProjects.has(project.id);
 
@@ -205,6 +206,22 @@ export function ProjectCard({ project, onShowReport }: ProjectCardProps) {
             <Download className="w-4 h-4" />
             <span className="ml-1 hidden sm:inline">Скачать</span>
           </Button>
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(project.id);
+              }}
+              data-testid={`delete-${project.id}`}
+              className="text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+              title="Удалить проект"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="ml-1 hidden sm:inline">Удалить</span>
+            </Button>
+          )}
         </div>
       </div>
       

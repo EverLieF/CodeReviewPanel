@@ -50,3 +50,5 @@ export async function generateFeedback(checks: StaticCheckResult): Promise<Feedb
   // Пока используем mock для совместимости
   return generateMockFeedback(checks);
 }
+
+

@@ -4,19 +4,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, RefreshCw, FileText, BarChart3, UserCheck } from 'lucide-react';
 import { ProjectCard } from '../components/project-card';
 import { UploadProjectModal } from '../components/upload-project-modal';
+import { DeleteProjectDialog } from '../components/delete-project-dialog';
 import { ReportTab } from '../components/report-tab';
 import { ReviewerTab } from '../components/reviewer-tab';
 import { useProjectStore } from '../store/project-store';
-import { useQuery } from '@tanstack/react-query';
-import { getProjects } from '../lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getProjects, deleteProject } from '../lib/api';
 import { useToast } from '../hooks/use-toast';
 import { useState } from 'react';
+import { Project } from '../lib/types';
 
 export default function ProjectPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('projects');
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   
   const { 
     data: projects = [], 
@@ -27,6 +31,41 @@ export default function ProjectPage() {
     queryKey: ['projects'],
     queryFn: getProjects,
   });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: deleteProject,
+    onSuccess: () => {
+      toast({
+        title: "Проект удален",
+        description: "Проект успешно удален из системы",
+      });
+      // Обновляем кэш проектов
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      // Обновляем кэш timeline
+      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      // Обновляем кэш runs
+      queryClient.invalidateQueries({ queryKey: ['runs'] });
+      setProjectToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка удаления",
+        description: error.message || "Не удалось удалить проект",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteProject = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setProjectToDelete(project);
+    }
+  };
+
+  const handleConfirmDelete = (projectId: string) => {
+    deleteProjectMutation.mutate(projectId);
+  };
 
   if (isError) {
     return (
@@ -155,6 +194,7 @@ export default function ProjectPage() {
                     setSelectedProjectId(project.id);
                     setActiveTab('report');
                   }}
+                  onDelete={handleDeleteProject}
                 />
               ))}
             </div>
@@ -198,6 +238,14 @@ export default function ProjectPage() {
         open={showUploadModal} 
         onClose={() => setShowUploadModal(false)}
         onSuccess={() => refetch()}
+      />
+
+      <DeleteProjectDialog
+        project={projectToDelete}
+        isOpen={!!projectToDelete}
+        onClose={() => setProjectToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteProjectMutation.isPending}
       />
     </div>
   );

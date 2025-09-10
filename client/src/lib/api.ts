@@ -255,3 +255,10 @@ export async function updateCommentStatus(
 export async function deleteComment(projectId: string, commentId: string): Promise<void> {
   return del<void>(`/projects/${projectId}/comments/${commentId}`);
 }
+
+/**
+ * Удалить проект
+ */
+export async function deleteProject(projectId: string): Promise<void> {
+  return del<void>(`/projects/${projectId}`);
+}

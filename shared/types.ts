@@ -54,7 +54,7 @@ export interface Project {
 
 export interface TimelineEvent {
   id: UUID;
-  type: "uploaded" | "run_started" | "checks_ready" | "feedback_ready" | "run_finished" | "error";
+  type: "uploaded" | "run_started" | "checks_ready" | "feedback_ready" | "run_finished" | "error" | "deleted";
   projectId?: UUID;
   submissionId?: UUID;
   runId?: UUID;
