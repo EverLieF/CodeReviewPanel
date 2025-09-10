@@ -916,6 +916,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/config — получить конфигурацию сервера
+  app.get("/api/config", async (_req, res, next) => {
+    try {
+      res.json({
+        enableLlm: config.enableLlm,
+        enableLlmOnly: config.enableLlmOnly,
+        enablePytest: config.enablePytest
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

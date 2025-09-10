@@ -262,3 +262,18 @@ export async function deleteComment(projectId: string, commentId: string): Promi
 export async function deleteProject(projectId: string): Promise<void> {
   return del<void>(`/projects/${projectId}`);
 }
+
+/**
+ * Получить конфигурацию сервера
+ */
+export async function getConfig(): Promise<{
+  enableLlm: boolean;
+  enableLlmOnly: boolean;
+  enablePytest: boolean;
+}> {
+  return get<{
+    enableLlm: boolean;
+    enableLlmOnly: boolean;
+    enablePytest: boolean;
+  }>('/config');
+}

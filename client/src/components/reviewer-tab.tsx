@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getReviewerReport } from '../lib/api';
+import { getReviewerReport, getConfig } from '../lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle, XCircle, AlertTriangle, Clock, FileText, ExternalLink, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { FileViewer } from './file-viewer';
+import AiReportPanel from './AiReportPanel';
 
 interface ReviewerTabProps {
   projectId: string;
@@ -80,6 +81,11 @@ export function ReviewerTab({ projectId }: ReviewerTabProps) {
     queryKey: ['reviewerReport', projectId],
     queryFn: () => getReviewerReport(projectId),
     enabled: !!projectId,
+  });
+
+  const { data: config } = useQuery({
+    queryKey: ['config'],
+    queryFn: getConfig,
   });
 
   if (isLoading) {
@@ -210,8 +216,22 @@ export function ReviewerTab({ projectId }: ReviewerTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Основная информация */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* AI-отчёт */}
+      {report?.checks?.runId && (
+        <AiReportPanel projectId={projectId} runId={report.checks.runId} />
+      )}
+      
+      {/* В режиме LLM-ONLY показываем только AI-отчёт */}
+      {config?.enableLlmOnly ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            В режиме «только LLM» отображается только AI-анализ кода
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Основная информация */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
@@ -464,6 +484,8 @@ export function ReviewerTab({ projectId }: ReviewerTabProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+        </>
       )}
 
       {/* Модальное окно для просмотра файла */}
