@@ -14,6 +14,7 @@ import { runStaticCheck } from "./services/staticCheck";
 import { runSubmission } from "./queue";
 import { timelineService } from "./services/timeline";
 import { errorHandler } from "./services/error-handler";
+import { yandexCompletion } from "./llm/yandex";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
@@ -751,6 +752,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next(err);
     }
   });
+
+  // Dev endpoint для ручной проверки LLM (только в development)
+  if (app.get('env') === 'development') {
+    app.post("/api/dev/llm", async (req, res, next) => {
+      try {
+        const { system, user, temperature, maxTokens, modelUri } = req.body ?? {};
+        const messages = [
+          { role: "system" as const, text: system || "You are a helpful assistant." },
+          { role: "user" as const, text: user || "ping" }
+        ];
+        const result = await yandexCompletion(messages, { temperature, maxTokens, modelUri });
+        res.json({ ok: true, text: result.text });
+      } catch (e: any) { 
+        next(e); 
+      }
+    });
+
+    app.get("/api/dev/llm/prompts", async (req, res, next) => {
+      try {
+        const { getReportSystemPromptFromHtml, getClassifierSystemPromptFromHtml } = await import("./llm/htmlPromptLoader");
+        const [report, classifier] = await Promise.all([
+          getReportSystemPromptFromHtml(),
+          getClassifierSystemPromptFromHtml()
+        ]);
+        res.json({
+          ok: true,
+          reportPreview: report.slice(0, 500),
+          classifierPreview: classifier.slice(0, 500),
+          reportLength: report.length,
+          classifierLength: classifier.length
+        });
+      } catch (e: any) { next(e); }
+    });
+  }
 
   const httpServer = createServer(app);
 

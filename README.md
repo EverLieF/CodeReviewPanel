@@ -109,6 +109,66 @@ npm run preview
 - `GET /api/timeline` - события истории
 - `GET /api/projects/:id/files/:filePath` - получение файла
 
+## LLM (YandexGPT)
+
+### Переменные окружения
+
+Для работы с YandexGPT необходимо настроить следующие переменные окружения:
+
+```bash
+# YandexGPT API ключи
+YC_API_KEY=your_yandex_api_key
+YC_FOLDER_ID=your_folder_id
+```
+
+### Пример использования
+
+```bash
+curl -X POST http://localhost:3000/api/dev/llm \
+  -H 'Content-Type: application/json' \
+  -d '{ "system":"Echo only OK", "user":"test" }'
+```
+
+## HTML-промпты
+
+### Размещение файлов
+
+HTML-файлы с промптами размещаются в директории `server/llm/prompts/`:
+
+```
+server/llm/prompts/
+├── Отчет студенту.html    # Промпт для генерации отчета студенту
+└── Классификатор.html     # Промпт для классификации отчетов
+```
+
+### Переменные окружения
+
+Для настройки путей к HTML-файлам используются переменные окружения:
+
+```bash
+# Путь к HTML-файлу с промптом для отчета студенту
+REPORT_PROMPT_HTML_PATH=server/llm/prompts/Отчет студенту.html
+
+# Путь к HTML-файлу с промптом для классификатора
+CLASSIFIER_PROMPT_HTML_PATH=server/llm/prompts/Классификатор.html
+```
+
+Если переменные не заданы, используются пути по умолчанию.
+
+### Проверка загрузки промптов
+
+В режиме разработки доступны dev-эндпойнты для тестирования:
+
+```bash
+# Проверить загрузку HTML-промптов
+curl http://localhost:3000/api/dev/llm/prompts
+
+# Тестировать LLM с кастомными промптами
+curl -X POST http://localhost:3000/api/dev/llm \
+  -H 'Content-Type: application/json' \
+  -d '{ "system":"Твой промпт", "user":"Тестовое сообщение" }'
+```
+
 ## Структура проекта
 
 ```

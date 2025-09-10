@@ -17,6 +17,11 @@ function requireEnv(name: string, fallback?: string): string {
   return value;
 }
 
+function optionalEnv(name: string): string | undefined {
+  const value = process.env[name];
+  return value === undefined || value === "" ? undefined : value;
+}
+
 // Normalize directories to absolute paths based on project root
 function resolveDir(dir: string): string {
   if (dir.startsWith("/")) return dir;
@@ -30,6 +35,11 @@ export const config = {
   artifactsDir: resolveDir(requireEnv("ARTIFACTS_DIR", "./data/artifacts")),
   maxUploadMb: parseInt(requireEnv("MAX_UPLOAD_MB", "100"), 10),
   enablePytest: requireEnv("ENABLE_PYTEST", "false").toLowerCase() === "true",
+  yandex: {
+    apiKey: optionalEnv("YC_API_KEY"),
+    folderId: optionalEnv("YC_FOLDER_ID"),
+    modelUri: process.env.YC_MODEL_URI || (process.env.YC_FOLDER_ID ? `gpt://${process.env.YC_FOLDER_ID}/yandexgpt-lite/latest` : undefined)
+  }
 };
 
 export type AppConfig = typeof config;
