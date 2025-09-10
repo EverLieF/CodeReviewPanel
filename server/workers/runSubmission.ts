@@ -7,6 +7,7 @@ import { collectChecks } from "../services/collect";
 import { generateMockFeedback } from "../llm/mock";
 import { generateStudentReport, classifyReport, runLLMReportAndVerdict } from "../llm/pipeline";
 import { extractIssuesFromReport } from "../llm/reportParser";
+import { buildSnapshotForLLM } from "../llm/snapshot";
 import { errorHandler } from "../services/error-handler";
 import * as fsp from "node:fs/promises";
 import type { Submission, SubmissionRun, Report } from "@shared/types";
@@ -114,37 +115,11 @@ export async function runSubmissionOrchestrator(params: { projectId: string; sub
 
     if (config.enableLlm) {
       try {
-        // Собираем снапшот проекта для LLM
-        // 3.1. Строка дерева
-        const treeNode = await buildFileTree(workRoot);
-        function renderTree(n: any, prefix = ""): string {
-          const here = `${prefix}${n.name}`;
-          if (!n.children || n.children.length === 0) return here;
-          const lines = [here];
-          for (const c of n.children) lines.push(renderTree(c, prefix + "  "));
-          return lines.join("\n");
-        }
-        const tree = renderTree(treeNode);
-
-        // 3.2. Содержимое файлов (ограничим размер, чтобы не раздувать prompt)
-        const files: Array<{ path: string; content: string }> = [];
-        const MAX_FILE_SIZE = 200 * 1024; // 200 KB
-        const collect = async (node: any, rel = "") => {
-          if (node.isDir && node.children) {
-            for (const c of node.children) await collect(c, node.path);
-          } else if (!node.isDir) {
-            try {
-              const abs = path.join(workRoot, node.path);
-              let content = await fsp.readFile(abs, "utf8");
-              if (content.length > MAX_FILE_SIZE) content = content.slice(0, MAX_FILE_SIZE) + "\n/* ...truncated... */";
-              files.push({ path: node.path.replace(/\\/g, "/"), content });
-            } catch {}
-          }
-        };
-        await collect(treeNode);
-
-        // 3.3. Запуск пайплайна (отчёт → классификатор) + сохранение артефактов и llm_issues.json
-        await runLLMReportAndVerdict(params.runId, { tree, files });
+        // Собираем снапшот проекта для LLM с использованием нового модуля
+        const snapshot = await buildSnapshotForLLM(workRoot);
+        
+        // Запуск пайплайна (отчёт → классификатор) + сохранение артефактов и llm_issues.json
+        await runLLMReportAndVerdict(params.runId, snapshot);
       } catch (e) {
         // Не валим весь прогон — просто лог и идём дальше
         console.warn("[LLM] pipeline failed:", e);

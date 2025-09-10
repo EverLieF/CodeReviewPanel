@@ -875,6 +875,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ ok: true, ...result });
       } catch (e:any) { next(e); }
     });
+
+    app.post("/api/dev/llm/snapshot", async (req, res, next) => {
+      try {
+        const { workRoot } = req.body || {};
+        if (!workRoot) return res.status(400).json({ ok:false, error:"workRoot required" });
+        const { buildSnapshotForLLM } = await import("./llm/snapshot");
+        const snap = await buildSnapshotForLLM(workRoot);
+        res.json({ ok:true, metrics: snap.metrics, treePreview: snap.tree.slice(0, 800), files: snap.files.slice(0, 3).map(f => ({ path: f.path, size: f.content.length })) });
+      } catch (e:any) { next(e); }
+    });
   }
 
   // GET /api/projects/:id/run/:runId/llm-artifacts

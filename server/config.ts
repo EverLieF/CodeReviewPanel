@@ -41,6 +41,16 @@ export const config = {
     apiKey: optionalEnv("YC_API_KEY"),
     folderId: optionalEnv("YC_FOLDER_ID"),
     modelUri: process.env.YC_MODEL_URI || (process.env.YC_FOLDER_ID ? `gpt://${process.env.YC_FOLDER_ID}/yandexgpt-lite/latest` : undefined)
+  },
+  llm: {
+    timeoutMs: Number(process.env.LLM_TIMEOUT_MS ?? 30000),
+    maxRetries: Number(process.env.LLM_MAX_RETRIES ?? 2),
+    retryBaseMs: Number(process.env.LLM_RETRY_BASE_MS ?? 1000),
+    allowedExts: (process.env.LLM_ALLOWED_EXTS ?? "").split(",").map(s => s.trim()).filter(Boolean),
+    excludedDirs: (process.env.LLM_EXCLUDED_DIRS ?? "").split(",").map(s => s.trim()).filter(Boolean),
+    maxFiles: Number(process.env.LLM_MAX_FILES ?? 400),
+    maxFileBytes: Number(process.env.LLM_MAX_FILE_BYTES ?? 200000),
+    maxTotalBytes: Number(process.env.LLM_MAX_TOTAL_BYTES ?? 800000),
   }
 };
 
